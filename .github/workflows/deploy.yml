@@ -29,16 +29,33 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Check build output
+        run: ls -la dist
+
+      - name: Check EC2 SSH connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            echo "SSH connection successful"
+            rm -rf /tmp/devops-cat
+            mkdir -p /tmp/devops-cat
+
       - name: Upload build files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "dist/**"
+          port: 22
+          source: "dist/*"
           target: "/tmp/devops-cat"
           strip_components: 1
-          rm: true
+          overwrite: true
 
       - name: Deploy build to NGINX
         uses: appleboy/ssh-action@v1.0.3
@@ -46,10 +63,12 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
+          port: 22
           script_stop: true
           script: |
+            test -f /tmp/devops-cat/index.html
             sudo mkdir -p /var/www/html
             sudo rm -rf /var/www/html/*
             sudo cp -r /tmp/devops-cat/* /var/www/html/
             sudo chown -R www-data:www-data /var/www/html
-            sudo systemctl restart nginx
+            sudo systemctl reload nginx || sudo systemctl restart nginx
