@@ -32,9 +32,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: dist/*
-          target: /home/ubuntu/devops-cat
+          source: "dist/**"
+          target: "/tmp/devops-cat"
           strip_components: 1
+          rm: true
 
       - name: Deploy build to NGINX
         uses: appleboy/ssh-action@v1.0.3
@@ -42,9 +43,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
+          script_stop: true
           script: |
             sudo mkdir -p /var/www/html
             sudo rm -rf /var/www/html/*
-            sudo cp -r /home/ubuntu/devops-cat/* /var/www/html/
+            sudo cp -r /tmp/devops-cat/* /var/www/html/
             sudo chown -R www-data:www-data /var/www/html
             sudo systemctl restart nginx
